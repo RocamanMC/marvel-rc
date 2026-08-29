@@ -1402,7 +1402,7 @@ const MARVEL_DATABASE = [
   },
   {
     id: "moon-knight",
-    poster: "https://image.tmdb.org/t/p/w500/3KzoEdclGwXQH2t2oYZZlw46TvW.jpg",
+    poster: "https://image.tmdb.org/t/p/w500/5AHnvXfW0mtsm047OP54n4pnV0R.jpg",
     title: "Caballero Luna (Moon Knight)",
     originalTitle: "Moon Knight",
     releaseYear: 2022,
@@ -1425,7 +1425,7 @@ const MARVEL_DATABASE = [
   },
   {
     id: "ms-marvel",
-    poster: "https://image.tmdb.org/t/p/w500/5AHnvXfW0mtsm047OP54n4pnV0R.jpg",
+    poster: "https://image.tmdb.org/t/p/w500/3KzoEdclGwXQH2t2oYZZlw46TvW.jpg",
     title: "Ms. Marvel",
     originalTitle: "Ms. Marvel",
     releaseYear: 2022,
@@ -1914,7 +1914,7 @@ const OWNED_ADDED_KEY = "marvel_admin_owned_added_v2";
 const OWNED_REMOVED_KEY = "marvel_admin_owned_removed_v2";
 
 // --- RUTA MÍNIMA IMPRESCINDIBLE PARA AVENGERS: DOOMSDAY (orden de visión) ---
-const DOOMSDAY_RELEASE_DATE = new Date("2026-12-08T00:00:00");
+const DOOMSDAY_RELEASE_DATE = new Date("2026-12-18T00:00:00");
 const DOOMSDAY_ESSENTIAL_IDS = [
   "xmen-1",
   "xmen-2",
@@ -2898,6 +2898,7 @@ export default function App() {
   const [selectedUniverse, setSelectedUniverse] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedType, setSelectedType] = useState("all");
+  const [onlyUnwatched, setOnlyUnwatched] = useState(false);
   const [sortOrder, setSortOrder] = useState("chrono");
   const [selectedItem, setSelectedItem] = useState(null);
 
@@ -3067,6 +3068,12 @@ export default function App() {
       }
     });
   }, [selectedUniverse, selectedType, searchQuery, sortOrder]);
+
+  const catalogItems = useMemo(() => {
+    const base = filteredData;
+    if (!onlyUnwatched) return base;
+    return base.filter((item) => !watchedList.includes(item.id));
+  }, [filteredData, onlyUnwatched, watchedList]);
 
   const groupedByEra = useMemo(() => {
     const groups = {};
@@ -4191,6 +4198,14 @@ export default function App() {
               </div>
               <div className="flex items-center gap-1 bg-black/40 p-1 rounded-xl border border-white/10 w-full sm:w-auto">
                 <button
+                  onClick={() => setOnlyUnwatched(!onlyUnwatched)}
+                  className={`flex-1 px-3 py-2 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 ${onlyUnwatched ? "bg-red-600 text-white" : "text-slate-400 hover:text-white"}`}
+                  title="Mostrar solo las que te faltan por ver"
+                >
+                  <Circle className="w-3.5 h-3.5" />
+                  No vistas
+                </button>
+                <button
                   onClick={() => setSortOrder("chrono")}
                   className={`flex-1 px-3 py-2 text-xs font-semibold rounded-lg ${sortOrder === "chrono" ? "bg-white/20 text-white" : "text-slate-400 hover:text-white"}`}
                 >
@@ -4207,7 +4222,12 @@ export default function App() {
 
             {searchQuery && (
               <p className="text-xs text-slate-400">
-                {filteredData.length} resultado{filteredData.length === 1 ? "" : "s"} para «{searchQuery}»
+                {onlyUnwatched ? catalogItems.length : filteredData.length} resultado{filteredData.length === 1 ? "" : "s"} para «{searchQuery}»
+              </p>
+            )}
+            {onlyUnwatched && !searchQuery && (
+              <p className="text-xs text-slate-400">
+                Mostrando {catalogItems.length} títulos sin ver — {MARVEL_DATABASE.length - catalogItems.length} ya vistas
               </p>
             )}
             {adminAuthed && (
@@ -4219,7 +4239,7 @@ export default function App() {
             </div>
           )}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-            {filteredData.map((item) => {
+            {catalogItems.map((item) => {
               const isWatched = watchedList.includes(item.id);
               return (
                 <div
