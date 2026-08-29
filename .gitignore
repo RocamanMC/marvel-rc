@@ -1,0 +1,7 @@
+node_modules
+dist
+*.log
+*BACKUP*.tsx
+marvel_multiverse_chronology_hub (1).tsx
+pelis_*.txt
+tenemos.txt
