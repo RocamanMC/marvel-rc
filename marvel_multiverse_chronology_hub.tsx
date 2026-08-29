@@ -1914,6 +1914,7 @@ const OWNED_ADDED_KEY = "marvel_admin_owned_added_v2";
 const OWNED_REMOVED_KEY = "marvel_admin_owned_removed_v2";
 
 // --- RUTA MÍNIMA IMPRESCINDIBLE PARA AVENGERS: DOOMSDAY (orden de visión) ---
+const DOOMSDAY_RELEASE_DATE = new Date("2026-12-08T00:00:00");
 const DOOMSDAY_ESSENTIAL_IDS = [
   "xmen-1",
   "xmen-2",
@@ -2906,6 +2907,7 @@ export default function App() {
   const [treeDensity, setTreeDensity] = useState("spacious");
   const [collapsedLane, setCollapsedLane] = useState(null);
   const [treeDetailOpen, setTreeDetailOpen] = useState(false);
+  const [nowTs, setNowTs] = useState(() => Date.now());
 
   const [watchedList, setWatchedList] = useState(() => {
     try {
@@ -2965,6 +2967,11 @@ export default function App() {
   useEffect(() => {
     try { localStorage.setItem(OWNED_REMOVED_KEY, JSON.stringify(ownedRemoved)); } catch (e) { console.error(e); }
   }, [ownedRemoved]);
+
+  useEffect(() => {
+    const t = setInterval(() => setNowTs(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
 
   const isOwned = (id) => {
     if (!adminAuthed) return false;
@@ -3085,6 +3092,16 @@ export default function App() {
 
   const doomsdayWatchedCount = MARVEL_DATABASE.filter(m => m.doomsdayTier === "tier-1" && watchedList.includes(m.id)).length;
   const doomsdayPercent = Math.round((doomsdayWatchedCount / doomsdayTier1.length) * 100);
+
+  const doomsdayCountdown = useMemo(() => {
+    const total = DOOMSDAY_RELEASE_DATE.getTime() - nowTs;
+    const diff = Math.max(0, total);
+    const d = Math.floor(diff / 86400000);
+    const h = Math.floor((diff % 86400000) / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+    return { d, h, m, s, over: total <= 0 };
+  }, [nowTs]);
   const essentialWatchedCount = DOOMSDAY_ESSENTIAL_IDS.filter(id => watchedList.includes(id)).length;
   const essentialRouteRows = [];
   for (let i = 0; i < DOOMSDAY_ESSENTIAL_IDS.length; i += 5) {
@@ -3641,6 +3658,43 @@ export default function App() {
                       className="h-full bg-gradient-to-r from-emerald-500 via-teal-400 to-amber-400 transition-all duration-500 rounded-full"
                       style={{ width: `${doomsdayPercent}%` }}
                     />
+                  </div>
+                </div>
+
+                <div className="bg-black/60 border border-rose-500/30 rounded-2xl p-4 sm:p-5 backdrop-blur-md max-w-2xl">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5">
+                      <Skull className="w-5 h-5 text-rose-400" />
+                      <div>
+                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
+                          Estreno de Avengers: Doomsday
+                        </span>
+                        <span className="text-lg font-black text-white">
+                          {DOOMSDAY_RELEASE_DATE.toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })}
+                        </span>
+                      </div>
+                    </div>
+                    {doomsdayCountdown.over ? (
+                      <span className="text-sm font-black text-emerald-400 px-4 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/40">
+                        ¡Ya en cines!
+                      </span>
+                    ) : (
+                      <div className="flex items-center gap-1.5">
+                        {[
+                          { v: doomsdayCountdown.d, l: "Días" },
+                          { v: doomsdayCountdown.h, l: "Horas" },
+                          { v: doomsdayCountdown.m, l: "Min" },
+                          { v: doomsdayCountdown.s, l: "Seg" }
+                        ].map((b) => (
+                          <div key={b.l} className="flex flex-col items-center bg-rose-500/10 border border-rose-500/30 rounded-xl px-2.5 py-1.5 min-w-[52px]">
+                            <span className="text-xl sm:text-2xl font-black text-white tabular-nums leading-none">
+                              {String(b.v).padStart(2, "0")}
+                            </span>
+                            <span className="text-[9px] font-bold uppercase tracking-wider text-rose-300">{b.l}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
