@@ -3101,6 +3101,9 @@ export default function App() {
   );
   const svgTotalHeight = visibleNodes.length * nodeSpacingY + 80;
 
+  const maxLaneX = graphOriginX + Math.max(...LANE_CONFIG.map((l) => l.id)) * laneSpacingX;
+  const cardOffset = maxLaneX + 24;
+
   // Posiciones calculadas para cada nodo
   const nodePositions = useMemo(() => {
     const map = {};
@@ -3399,7 +3402,7 @@ export default function App() {
                   <span className="text-[11px] text-slate-500">Haz clic en cualquier título para ver detalles</span>
                 </div>
 
-                <div className="relative" style={{ minWidth: "620px", height: `${svgTotalHeight}px` }}>
+                <div className="relative" style={{ minWidth: "700px", height: `${svgTotalHeight}px` }}>
                   
                   {/* CAPA SVG CON LAS LÍNEAS TEMPORALES */}
                   <svg 
@@ -3497,11 +3500,12 @@ export default function App() {
 
                           {/* Tarjeta de la Película */}
                           <div 
-                            className={`ml-[290px] flex-1 mr-2 p-2.5 rounded-xl border transition-all flex items-center justify-between gap-3 backdrop-blur-md ${
+                            className={`flex-1 mr-2 p-2.5 rounded-xl border transition-all flex items-center justify-between gap-3 backdrop-blur-md ${
                               isSelected
                                 ? "bg-white/15 border-white/40 shadow-xl shadow-black"
                                 : "bg-black/50 border-white/5 hover:border-white/20 hover:bg-white/5"
                             }`}
+                            style={{ marginLeft: `${cardOffset}px` }}
                           >
                             <div className="flex items-center gap-2.5 min-w-0">
 
@@ -3527,7 +3531,7 @@ export default function App() {
                                   {esTenemos && (
                                     <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400 shrink-0" title="La tienes" />
                                   )}
-                                  <h4 className="text-xs sm:text-sm font-bold text-white truncate group-hover:text-amber-300 transition-colors">
+                                  <h4 className="text-xs sm:text-sm font-bold text-white line-clamp-2 leading-snug group-hover:text-amber-300 transition-colors">
                                     {node.label}
                                   </h4>
                                   {isWatched && (
@@ -4211,6 +4215,43 @@ export default function App() {
         {/* ========================================================================= */}
         {activeTab === "catalog" && (
           <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Buscar película, serie, personaje..."
+                  className="w-full pl-10 pr-10 py-2.5 bg-black/40 border border-white/10 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-red-500 transition-colors"
+                />
+                {searchQuery && (
+                  <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white">
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+              <div className="flex items-center gap-1 bg-black/40 p-1 rounded-xl border border-white/10 w-full sm:w-auto">
+                <button
+                  onClick={() => setSortOrder("chrono")}
+                  className={`flex-1 px-3 py-2 text-xs font-semibold rounded-lg ${sortOrder === "chrono" ? "bg-white/20 text-white" : "text-slate-400 hover:text-white"}`}
+                >
+                  Cronología
+                </button>
+                <button
+                  onClick={() => setSortOrder("release")}
+                  className={`flex-1 px-3 py-2 text-xs font-semibold rounded-lg ${sortOrder === "release" ? "bg-white/20 text-white" : "text-slate-400 hover:text-white"}`}
+                >
+                  Estreno
+                </button>
+              </div>
+            </div>
+
+            {searchQuery && (
+              <p className="text-xs text-slate-400">
+                {filteredData.length} resultado{filteredData.length === 1 ? "" : "s"} para «{searchQuery}»
+              </p>
+            )}
             {adminAuthed && (
             <div className="flex items-center gap-2 bg-black/40 p-3 rounded-xl border border-white/10">
               <Star className="w-4 h-4 text-amber-400 fill-amber-400 shrink-0" />
@@ -4300,13 +4341,26 @@ export default function App() {
                       Ficha
                     </button>
 
-                    <button
-                      onClick={() => toggleWatched(item.id)}
-                      className={`px-2.5 py-1.5 rounded-lg text-xs font-bold ${isWatched ? "bg-emerald-600 text-white" : "bg-white/10 text-slate-300"}`}
-                    >
-                      {isWatched ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Circle className="w-3.5 h-3.5" />}
-                      {isWatched ? "Vista" : "Marcar"}
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                      {adminAuthed && (
+                        <button
+                          onClick={() => toggleOwned(item.id)}
+                          title="¿Está en tu servidor?"
+                          className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-colors ${isOwned(item.id) ? "bg-amber-500/30 text-amber-300 border border-amber-500/40" : "bg-white/10 text-slate-300 hover:text-white"}`}
+                        >
+                          <Server className="w-3.5 h-3.5" />
+                          {isOwned(item.id) ? "Servidor" : "Añadir"}
+                        </button>
+                      )}
+
+                      <button
+                        onClick={() => toggleWatched(item.id)}
+                        className={`px-2.5 py-1.5 rounded-lg text-xs font-bold ${isWatched ? "bg-emerald-600 text-white" : "bg-white/10 text-slate-300"}`}
+                      >
+                        {isWatched ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Circle className="w-3.5 h-3.5" />}
+                        {isWatched ? "Vista" : "Marcar"}
+                      </button>
+                    </div>
                   </div>
                 </div>
               );
