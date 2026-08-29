@@ -1912,6 +1912,7 @@ const ADMIN_PASSWORD = "[REDACTED]";
 const ADMIN_SESSION_KEY = "marvel_admin_session_v2";
 const OWNED_ADDED_KEY = "marvel_admin_owned_added_v2";
 const OWNED_REMOVED_KEY = "marvel_admin_owned_removed_v2";
+const OWNED_STARS_KEY = "marvel_show_owned_stars_v1";
 
 // --- RUTA MÍNIMA IMPRESCINDIBLE PARA AVENGERS: DOOMSDAY (orden de visión) ---
 const DOOMSDAY_RELEASE_DATE = new Date("2026-12-18T00:00:00");
@@ -2899,6 +2900,7 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedType, setSelectedType] = useState("all");
   const [onlyUnwatched, setOnlyUnwatched] = useState(false);
+  const [onlyOwned, setOnlyOwned] = useState(false);
   const [sortOrder, setSortOrder] = useState("chrono");
   const [selectedItem, setSelectedItem] = useState(null);
 
@@ -2954,6 +2956,9 @@ export default function App() {
   const [adminError, setAdminError] = useState("");
   const [logoClicks, setLogoClicks] = useState(0);
   const logoTimerRef = useRef(null);
+  const [showOwnedStars, setShowOwnedStars] = useState(() => {
+    try { return sessionStorage.getItem(OWNED_STARS_KEY) === "1"; } catch { return false; }
+  });
   const [ownedAdded, setOwnedAdded] = useState(() => {
     try { return JSON.parse(localStorage.getItem(OWNED_ADDED_KEY)) || []; } catch { return []; }
   });
@@ -2975,10 +2980,11 @@ export default function App() {
   }, []);
 
   const isOwned = (id) => {
-    if (!adminAuthed) return false;
     if (ownedRemoved.includes(id)) return false;
     return TENEMOS_IDS.includes(id) || ownedAdded.includes(id);
   };
+
+  const showStars = showOwnedStars || adminAuthed;
 
   const getOwnedList = () => {
     if (!adminAuthed) return [];
@@ -3014,6 +3020,17 @@ export default function App() {
       }
       return next;
     });
+  };
+
+  const handleStarClick = () => {
+    setShowOwnedStars((prevShow) => {
+      const toggled = !prevShow;
+      try { sessionStorage.setItem(OWNED_STARS_KEY, toggled ? "1" : "0"); } catch (err) { console.error(err); }
+      return toggled;
+    });
+    if (showOwnedStars) {
+      setOnlyOwned(false);
+    }
   };
 
   const handleAdminLogin = (e) => {
@@ -3070,10 +3087,11 @@ export default function App() {
   }, [selectedUniverse, selectedType, searchQuery, sortOrder]);
 
   const catalogItems = useMemo(() => {
-    const base = filteredData;
-    if (!onlyUnwatched) return base;
-    return base.filter((item) => !watchedList.includes(item.id));
-  }, [filteredData, onlyUnwatched, watchedList]);
+    let items = filteredData;
+    if (onlyUnwatched) items = items.filter((item) => !watchedList.includes(item.id));
+    if (onlyOwned) items = items.filter((item) => isOwned(item.id));
+    return items;
+  }, [filteredData, onlyUnwatched, onlyOwned, watchedList, ownedAdded, ownedRemoved]);
 
   const groupedByEra = useMemo(() => {
     const groups = {};
@@ -3207,6 +3225,15 @@ export default function App() {
                 {adminAuthed && (
                   <Lock className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 text-amber-400 fill-amber-400/30 drop-shadow" title="Admin activo" />
                 )}
+              </button>
+              <button
+                onClick={handleStarClick}
+                title={showStars ? "Ocultar estrellas" : "Mostrar estrellas de la colección"}
+                className={`flex items-center justify-center w-9 h-9 rounded-lg border transition-all select-none ${
+                  showStars ? "border-amber-500/60 bg-amber-500/15" : "border-white/10 bg-white/5 hover:bg-white/15"
+                }`}
+              >
+                <Star className={`w-5 h-5 ${showStars ? "text-amber-400 fill-amber-400" : "text-slate-400"}`} />
               </button>
               <div className="flex flex-col">
                 <span className="font-black text-sm sm:text-base tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-200 to-slate-400">
@@ -3478,7 +3505,7 @@ export default function App() {
                       const laneInfo = LANE_CONFIG[node.lane];
                       const dbItem = MARVEL_DATABASE.find(m => m.id === node.refId);
                       const isWatched = dbItem && watchedList.includes(dbItem.id);
-                      const esTenemos = dbItem && isOwned(dbItem.id);
+                      const esTenemos = showStars && dbItem && isOwned(dbItem.id);
 
                       const isNodeHighlighted = highlightedLine === "all" || highlightedLine === node.lineName;
 
@@ -3744,7 +3771,7 @@ export default function App() {
                         const item = MARVEL_DATABASE.find((d) => d.id === id);
                         if (!item) return null;
                         const isWatched = watchedList.includes(item.id);
-                        const esTenemos = isOwned(item.id);
+                        const esTenemos = showStars && isOwned(item.id);
                         const globalN = cIdx * 5 + k + 1;
                         const arrow = k > 0 ? (
                           <div key={`arr-${id}`} className="flex items-center justify-center px-0.5">
@@ -3864,7 +3891,7 @@ export default function App() {
                             )}
                             <div className="min-w-0">
                               <div className="flex items-center gap-1.5">
-                                {isOwned(item.id) && (
+                                {showStars && isOwned(item.id) && (
                                   <Star className="w-4 h-4 text-amber-400 fill-amber-400 shrink-0" title="La tienes" />
                                 )}
                                 <h3 
@@ -3951,7 +3978,7 @@ export default function App() {
                           )}
                           <div className="min-w-0">
                             <div className="flex items-center gap-1.5">
-                              {isOwned(item.id) && (
+                              {showStars && isOwned(item.id) && (
                                 <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400 shrink-0" title="La tienes" />
                               )}
                               <h4 
@@ -4126,7 +4153,7 @@ export default function App() {
                               )}
                               <div className="min-w-0">
                                 <div className="flex items-center gap-1.5">
-                                  {isOwned(item.id) && (
+                                  {showStars && isOwned(item.id) && (
                                     <Star className="w-4 h-4 text-amber-400 fill-amber-400 shrink-0" title="La tienes" />
                                   )}
                                   <h3 
@@ -4205,6 +4232,16 @@ export default function App() {
                   <Circle className="w-3.5 h-3.5" />
                   No vistas
                 </button>
+                {showStars && (
+                <button
+                  onClick={() => setOnlyOwned(!onlyOwned)}
+                  className={`flex-1 px-3 py-2 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 ${onlyOwned ? "bg-amber-500 text-black" : "text-slate-400 hover:text-white"}`}
+                  title="Mostrar solo los títulos que tienes"
+                >
+                  <Star className="w-3.5 h-3.5" />
+                  Mis títulos
+                </button>
+                )}
                 <button
                   onClick={() => setSortOrder("chrono")}
                   className={`flex-1 px-3 py-2 text-xs font-semibold rounded-lg ${sortOrder === "chrono" ? "bg-white/20 text-white" : "text-slate-400 hover:text-white"}`}
@@ -4222,12 +4259,17 @@ export default function App() {
 
             {searchQuery && (
               <p className="text-xs text-slate-400">
-                {onlyUnwatched ? catalogItems.length : filteredData.length} resultado{filteredData.length === 1 ? "" : "s"} para «{searchQuery}»
+                {(onlyUnwatched || onlyOwned ? catalogItems.length : filteredData.length)} resultado{(onlyUnwatched || onlyOwned ? catalogItems : filteredData).length === 1 ? "" : "s"} para «{searchQuery}»
               </p>
             )}
             {onlyUnwatched && !searchQuery && (
               <p className="text-xs text-slate-400">
                 Mostrando {catalogItems.length} títulos sin ver — {MARVEL_DATABASE.length - catalogItems.length} ya vistas
+              </p>
+            )}
+            {onlyOwned && !onlyUnwatched && !searchQuery && (
+              <p className="text-xs text-slate-400">
+                Mostrando solo los {catalogItems.length} títulos que tienes en tu colección
               </p>
             )}
             {adminAuthed && (
@@ -4292,7 +4334,7 @@ export default function App() {
                         )}
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5">
-                            {isOwned(item.id) && (
+                            {showStars && isOwned(item.id) && (
                               <Star className="w-4 h-4 text-amber-400 fill-amber-400 shrink-0" title="La tienes" />
                             )}
                             <h3 
@@ -4447,7 +4489,7 @@ export default function App() {
                   />
                 )}
                 <div className="flex items-start gap-2 min-w-0 pt-1">
-                  {activeDatabaseItem && isOwned(activeDatabaseItem.id) && (
+                  {showStars && activeDatabaseItem && isOwned(activeDatabaseItem.id) && (
                     <Star className="w-5 h-5 text-amber-400 fill-amber-400 shrink-0 mt-0.5" title="La tienes" />
                   )}
                   <div className="min-w-0">
@@ -4630,7 +4672,7 @@ export default function App() {
               </div>
 
               <div className="flex items-center gap-2 z-10">
-                {isOwned(selectedItem.id) && (
+                {showStars && isOwned(selectedItem.id) && (
                   <Star className="w-6 h-6 text-amber-400 fill-amber-400 drop-shadow-md shrink-0" title="La tienes" />
                 )}
                 <h2 className="text-xl sm:text-2xl font-black text-white drop-shadow-md">
