@@ -2905,6 +2905,7 @@ export default function App() {
   const [highlightedLine, setHighlightedLine] = useState("all");
   const [treeDensity, setTreeDensity] = useState("spacious");
   const [collapsedLane, setCollapsedLane] = useState(null);
+  const [treeDetailOpen, setTreeDetailOpen] = useState(false);
 
   const [watchedList, setWatchedList] = useState(() => {
     try {
@@ -3389,10 +3390,10 @@ export default function App() {
             })()}
 
             {/* GRAFO VISUAL CON LÍNEAS Y NODOS */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div className="space-y-6">
               
-              {/* ÁREA DEL MAPA SVG (8 Columnas) */}
-              <div className="lg:col-span-8 bg-[#090c14] rounded-3xl border border-white/10 p-3 sm:p-6 relative overflow-x-auto shadow-2xl">
+              {/* ÁREA DEL MAPA SVG (Ancho Completo) */}
+              <div className="bg-[#090c14] rounded-3xl border border-white/10 p-3 sm:p-6 relative overflow-x-auto shadow-2xl">
                 
                 <div className="flex items-center justify-between pb-4 mb-2 border-b border-white/10 text-xs text-slate-400">
                   <div className="flex items-center gap-2">
@@ -3460,7 +3461,14 @@ export default function App() {
                       return (
                         <div
                           key={node.id}
-                          onClick={() => setSelectedTimelineNode(node)}
+                          onClick={() => {
+                        if (treeDetailOpen && selectedTimelineNode?.id === node.id) {
+                          setTreeDetailOpen(false);
+                        } else {
+                          setSelectedTimelineNode(node);
+                          setTreeDetailOpen(true);
+                        }
+                      }}
                           className={`absolute left-0 right-0 flex items-center cursor-pointer group transition-all duration-200 ${
                             isNodeHighlighted ? "opacity-100" : "opacity-30 hover:opacity-80"
                           }`}
@@ -3527,15 +3535,15 @@ export default function App() {
                               </span>
 
                               <div className="min-w-0">
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-start gap-1.5">
                                   {esTenemos && (
-                                    <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400 shrink-0" title="La tienes" />
+                                    <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400 shrink-0 mt-0.5" title="La tienes" />
                                   )}
-                                  <h4 className="text-xs sm:text-sm font-bold text-white line-clamp-2 leading-snug group-hover:text-amber-300 transition-colors">
+                                  <h4 className="flex-1 min-w-0 text-xs sm:text-sm font-bold text-white leading-snug group-hover:text-amber-300 transition-colors">
                                     {node.label}
                                   </h4>
                                   {isWatched && (
-                                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
                                   )}
                                 </div>
                                 <span className="text-[11px] text-slate-400 block truncate">
@@ -3567,133 +3575,29 @@ export default function App() {
 
               </div>
 
-              {/* PANEL LATERAL DE DETALLES DEL EVENTO SELECCIONADO (4 Columnas) */}
-              <div className="lg:col-span-4 sticky top-20 space-y-4">
-                
-                {selectedTimelineNode && (
-                  <div className="bg-[#090c14] rounded-3xl border border-white/15 p-5 sm:p-6 shadow-2xl space-y-4">
-                    
-                    <div className="flex items-center justify-between border-b border-white/10 pb-3">
-                      <div className="flex items-center gap-2">
-                        <Globe className="w-4 h-4 text-purple-400" />
-                        <span className="text-xs text-purple-300 font-bold uppercase">
-                          Detalle del Evento
-                        </span>
-                      </div>
-                      <span className="text-[10px] text-slate-300 bg-white/10 px-2 py-0.5 rounded font-semibold">
-                        {selectedTimelineNode.year}
-                      </span>
-                    </div>
-
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2 text-xs">
-                        <span 
-                          className="px-2 py-0.5 rounded font-bold text-white text-[10px]"
-                          style={{ backgroundColor: LANE_CONFIG[selectedTimelineNode.lane]?.color }}
-                        >
-                          {selectedTimelineNode.lineName}
-                        </span>
-                      </div>
-                      <div className="flex items-start gap-3 pt-1">
-                        {activeDatabaseItem?.poster && (
-                          <img
-                            src={activeDatabaseItem.poster}
-                            alt={selectedTimelineNode.label}
-                            loading="lazy"
-                            onError={(e) => { e.currentTarget.style.display = "none"; }}
-                            className="w-16 h-24 rounded-xl object-cover object-top shrink-0 shadow-lg shadow-black/40 border border-white/10"
-                          />
-                        )}
-                        <div className="flex items-start gap-2 min-w-0">
-                        {activeDatabaseItem && isOwned(activeDatabaseItem.id) && (
-                          <Star className="w-5 h-5 text-amber-400 fill-amber-400 shrink-0 mt-0.5" title="La tienes" />
-                        )}
-                        <h3 className="text-lg font-black text-white leading-snug">
-                          {selectedTimelineNode.label}
-                        </h3>
-                      </div>
-                      </div>
-                      <p className="text-xs text-slate-300 italic">
-                        {selectedTimelineNode.tag}
-                      </p>
-                    </div>
-
-                    {activeDatabaseItem && (
-                      <div className="space-y-3 pt-2">
-                        <div className="bg-white/5 rounded-2xl p-3 border border-white/5 space-y-1 text-xs">
-                          <span className="text-slate-400 font-bold uppercase text-[10px] block">
-                            Impacto en la Cronología:
-                          </span>
-                          <p className="text-slate-200 leading-relaxed">
-                            {activeDatabaseItem.chronoReason}
-                          </p>
-                        </div>
-
-                        <div className="bg-purple-950/40 rounded-2xl p-3.5 border border-purple-500/30 space-y-1 text-xs">
-                          <span className="text-purple-300 font-black uppercase text-[10px] flex items-center gap-1">
-                            <Sparkles className="w-3 h-3 text-purple-400" />
-                            Conexión Doomsday / Secret Wars:
-                          </span>
-                          <p className="text-slate-200 leading-relaxed">
-                            {activeDatabaseItem.multiverseConnections}
-                          </p>
-                        </div>
-
-                        <div className="flex items-center gap-2 pt-2">
-                          <button
-                            onClick={() => setSelectedItem(activeDatabaseItem)}
-                            className="flex-1 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs transition-colors flex items-center justify-center gap-1.5 shadow-lg shadow-purple-900/30"
-                          >
-                            <Info className="w-3.5 h-3.5" />
-                            Ver Ficha Completa
-                          </button>
-
-                          <button
-                            onClick={() => toggleWatched(activeDatabaseItem.id)}
-                            className={`p-2.5 rounded-xl border text-xs font-bold transition-all ${
-                              watchedList.includes(activeDatabaseItem.id)
-                                ? "bg-emerald-600 text-white border-emerald-500"
-                                : "bg-white/10 text-slate-300 hover:text-white border-white/10"
-                            }`}
-                          >
-                            {watchedList.includes(activeDatabaseItem.id) ? (
-                              <CheckCircle2 className="w-4 h-4" />
-                            ) : (
-                              <Circle className="w-4 h-4" />
-                            )}
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
+              {/* Guía de Universos y Realidades (ancho completo) */}
+              <div className="bg-[#090c14] rounded-3xl border border-white/10 p-5 space-y-3 text-xs">
+                <h4 className="font-bold text-white flex items-center gap-1.5">
+                  <Activity className="w-4 h-4 text-emerald-400" />
+                  Guía de Universos y Realidades
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 text-slate-300 text-[11px]">
+                  <div>
+                    <strong className="text-red-400">Línea Sagrada (Tierra-616):</strong> El universo principal donde transcurren las películas de Marvel Studios (Vengadores, Thunderbolts, Sam Wilson).
                   </div>
-                )}
-
-                {/* Glosario de Universos */}
-                <div className="bg-[#090c14] rounded-3xl border border-white/10 p-5 space-y-3 text-xs">
-                  <h4 className="font-bold text-white flex items-center gap-1.5">
-                    <Activity className="w-4 h-4 text-emerald-400" />
-                    Guía de Universos y Realidades
-                  </h4>
-                  <div className="space-y-2 text-slate-300 text-[11px]">
-                    <div>
-                      <strong className="text-red-400">Línea Sagrada (Tierra-616):</strong> El universo principal donde transcurren las películas de Marvel Studios (Vengadores, Thunderbolts, Sam Wilson).
-                    </div>
-                    <div>
-                      <strong className="text-blue-400">Los 4 Fantásticos:</strong> La dimensión retro de los 60 de Pedro Pascal y la saga clásica de Fox.
-                    </div>
-                    <div>
-                      <strong className="text-amber-400">Universo Mutante (Fox):</strong> La saga de X-Men y Deadpool rescatada en el Vacío de la TVA.
-                    </div>
-                    <div>
-                      <strong className="text-cyan-400">Spider-Verse:</strong> Las líneas temporales de Tobey Maguire, Andrew Garfield y Miles Morales.
-                    </div>
-                    <div>
-                      <strong className="text-purple-400">Battleworld:</strong> El mundo unificado forjado por Doctor Doom tras el colapso de las realidades.
-                    </div>
+                  <div>
+                    <strong className="text-blue-400">Los 4 Fantásticos:</strong> La dimensión retro de los 60 de Pedro Pascal y la saga clásica de Fox.
+                  </div>
+                  <div>
+                    <strong className="text-amber-400">Universo Mutante (Fox):</strong> La saga de X-Men y Deadpool rescatada en el Vacío de la TVA.
+                  </div>
+                  <div>
+                    <strong className="text-cyan-400">Spider-Verse:</strong> Las líneas temporales de Tobey Maguire, Andrew Garfield y Miles Morales.
+                  </div>
+                  <div>
+                    <strong className="text-purple-400">Battleworld:</strong> El mundo unificado forjado por Doctor Doom tras el colapso de las realidades.
                   </div>
                 </div>
-
               </div>
 
             </div>
@@ -4421,6 +4325,121 @@ export default function App() {
         )}
 
       </main>
+
+      {/* MODAL DETALLE DEL EVENTO (telar: panel lateral derecho al hacer clic en un nodo) */}
+      {treeDetailOpen && selectedTimelineNode && (
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200 lg:hidden"
+            onClick={() => setTreeDetailOpen(false)}
+          />
+          <div className="fixed z-50 right-0 top-0 h-full w-full max-w-[400px] bg-[#0e1017] border-l border-white/15 shadow-2xl overflow-y-auto p-5 sm:p-6 animate-in slide-in-from-right duration-300">
+            <button
+              onClick={() => setTreeDetailOpen(false)}
+              className="absolute right-4 top-4 bg-white/5 hover:bg-white/15 p-1.5 rounded-full text-slate-400 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center justify-between border-b border-white/10 pb-3 pr-8">
+              <div className="flex items-center gap-2">
+                <Globe className="w-4 h-4 text-purple-400" />
+                <span className="text-xs text-purple-300 font-bold uppercase">
+                  Detalle del Evento
+                </span>
+              </div>
+              <span className="text-[10px] text-slate-300 bg-white/10 px-2 py-0.5 rounded font-semibold">
+                {selectedTimelineNode.year}
+              </span>
+            </div>
+
+            <div className="space-y-1 pt-3">
+              <div className="flex items-center gap-2 text-xs">
+                <span
+                  className="px-2 py-0.5 rounded font-bold text-white text-[10px]"
+                  style={{ backgroundColor: LANE_CONFIG[selectedTimelineNode.lane]?.color }}
+                >
+                  {selectedTimelineNode.lineName}
+                </span>
+              </div>
+              <div className="flex items-start gap-3 pt-2">
+                {activeDatabaseItem?.poster && (
+                  <img
+                    src={activeDatabaseItem.poster}
+                    alt={selectedTimelineNode.label}
+                    loading="lazy"
+                    onError={(e) => { e.currentTarget.style.display = "none"; }}
+                    className="w-16 h-24 rounded-xl object-cover object-top shrink-0 shadow-lg shadow-black/40 border border-white/10"
+                  />
+                )}
+                <div className="flex items-start gap-2 min-w-0 pt-1">
+                  {activeDatabaseItem && isOwned(activeDatabaseItem.id) && (
+                    <Star className="w-5 h-5 text-amber-400 fill-amber-400 shrink-0 mt-0.5" title="La tienes" />
+                  )}
+                  <div className="min-w-0">
+                    <h3 className="text-lg font-black text-white leading-snug">
+                      {selectedTimelineNode.label}
+                    </h3>
+                    <p className="text-xs text-slate-300 italic mt-0.5">
+                      {selectedTimelineNode.tag}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {activeDatabaseItem && (
+              <div className="space-y-3 pt-4">
+                <div className="bg-white/5 rounded-2xl p-3 border border-white/5 space-y-1 text-xs">
+                  <span className="text-slate-400 font-bold uppercase text-[10px] block">
+                    Impacto en la Cronología:
+                  </span>
+                  <p className="text-slate-200 leading-relaxed">
+                    {activeDatabaseItem.chronoReason}
+                  </p>
+                </div>
+
+                <div className="bg-purple-950/40 rounded-2xl p-3.5 border border-purple-500/30 space-y-1 text-xs">
+                  <span className="text-purple-300 font-black uppercase text-[10px] flex items-center gap-1">
+                    <Sparkles className="w-3 h-3 text-purple-400" />
+                    Conexión Doomsday / Secret Wars:
+                  </span>
+                  <p className="text-slate-200 leading-relaxed">
+                    {activeDatabaseItem.multiverseConnections}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 pt-2">
+                  <button
+                    onClick={() => setSelectedItem(activeDatabaseItem)}
+                    className="flex-1 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs transition-colors flex items-center justify-center gap-1.5 shadow-lg shadow-purple-900/30"
+                  >
+                    <Info className="w-3.5 h-3.5" />
+                    Ver Ficha Completa
+                  </button>
+
+                  <button
+                    onClick={() => toggleWatched(activeDatabaseItem.id)}
+                    className={`p-2.5 rounded-xl border text-xs font-bold transition-all ${
+                      watchedList.includes(activeDatabaseItem.id)
+                        ? "bg-emerald-600 text-white border-emerald-500"
+                        : "bg-white/10 text-slate-300 hover:text-white border-white/10"
+                    }`}
+                    title="Marcar como vista"
+                  >
+                    {watchedList.includes(activeDatabaseItem.id) ? (
+                      <CheckCircle2 className="w-4 h-4" />
+                    ) : (
+                      <Circle className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+
+          </div>
+        </>
+      )}
 
       {/* MODAL PANEL ADMIN (5 clics en el logo MARVEL) */}
       {adminPanelOpen && (
