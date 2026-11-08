@@ -1906,26 +1906,11 @@ const TENEMOS_IDS = [
   "incredible-hulk"
 ];
 
-// --- ACCESO ADMIN (credenciales protegidas mediante hash SHA-256) ---
-const ADMIN_USER_HASH = "51997cc49513b006f1cab15c50ac9aa625781cb6fb6989dd867cc6cc12965d32";
-const ADMIN_PASS_HASH = "1e774cd6dff20948e66a1e9afad45e8a087074769ad07ca374a75a4dead9dc8a";
-const ADMIN_SESSION_KEY = "marvel_admin_session_v2";
+// --- GESTIÓN DE COLECCIÓN PERSONAL (almacenamiento local en navegador) ---
+const COLLECTION_MODE_KEY = "marvel_collection_mode_v2";
 const OWNED_ADDED_KEY = "marvel_admin_owned_added_v2";
 const OWNED_REMOVED_KEY = "marvel_admin_owned_removed_v2";
 const OWNED_STARS_KEY = "marvel_show_owned_stars_v1";
-
-async function verifyAdminAuth(user: string, pass: string): Promise<boolean> {
-  try {
-    const encoder = new TextEncoder();
-    const userBuf = await crypto.subtle.digest("SHA-256", encoder.encode(user.trim().toLowerCase()));
-    const passBuf = await crypto.subtle.digest("SHA-256", encoder.encode(pass));
-    const userHex = Array.from(new Uint8Array(userBuf)).map(b => b.toString(16).padStart(2, "0")).join("");
-    const passHex = Array.from(new Uint8Array(passBuf)).map(b => b.toString(16).padStart(2, "0")).join("");
-    return userHex === ADMIN_USER_HASH && passHex === ADMIN_PASS_HASH;
-  } catch {
-    return false;
-  }
-}
 
 // --- RUTA MÍNIMA IMPRESCINDIBLE PARA AVENGERS: DOOMSDAY (orden de visión) ---
 const DOOMSDAY_RELEASE_DATE = new Date("2026-12-18T00:00:00");
@@ -2959,18 +2944,15 @@ export default function App() {
     }
   }, [watchlist]);
 
-  // --- MODO ADMIN (oculto: 5 clics en el logo MARVEL) ---
+  // --- MODO COLECCIÓN PERSONAL (5 clics en el logo MARVEL) ---
   const [adminAuthed, setAdminAuthed] = useState(() => {
-    try { return sessionStorage.getItem(ADMIN_SESSION_KEY) === "1"; } catch { return false; }
+    try { return localStorage.getItem(COLLECTION_MODE_KEY) === "1"; } catch { return false; }
   });
   const [adminPanelOpen, setAdminPanelOpen] = useState(false);
-  const [adminUser, setAdminUser] = useState("");
-  const [adminPass, setAdminPass] = useState("");
-  const [adminError, setAdminError] = useState("");
   const [logoClicks, setLogoClicks] = useState(0);
   const logoTimerRef = useRef(null);
   const [showOwnedStars, setShowOwnedStars] = useState(() => {
-    try { return sessionStorage.getItem(OWNED_STARS_KEY) === "1"; } catch { return false; }
+    try { return localStorage.getItem(OWNED_STARS_KEY) === "1"; } catch { return false; }
   });
   const [ownedAdded, setOwnedAdded] = useState(() => {
     try { return JSON.parse(localStorage.getItem(OWNED_ADDED_KEY)) || []; } catch { return []; }
@@ -3046,26 +3028,10 @@ export default function App() {
     }
   };
 
-  const handleAdminLogin = async (e) => {
-    e.preventDefault();
-    const isValid = await verifyAdminAuth(adminUser, adminPass);
-    if (isValid) {
-      setAdminAuthed(true);
-      try { sessionStorage.setItem(ADMIN_SESSION_KEY, "1"); } catch (err) { console.error(err); }
-      setAdminPanelOpen(false);
-      setAdminUser("");
-      setAdminPass("");
-      setAdminError("");
-    } else {
-      setAdminError("Usuario o contraseña incorrectos");
-      setAdminPass("");
-    }
-  };
-
-  const handleAdminLogout = () => {
-    setAdminAuthed(false);
-    try { sessionStorage.removeItem(ADMIN_SESSION_KEY); } catch (err) { console.error(err); }
-    setAdminPanelOpen(false);
+  const toggleCollectionMode = () => {
+    const nextState = !adminAuthed;
+    setAdminAuthed(nextState);
+    try { localStorage.setItem(COLLECTION_MODE_KEY, nextState ? "1" : "0"); } catch (err) { console.error(err); }
   };
 
   const toggleWatched = (id) => {
@@ -4571,80 +4537,38 @@ export default function App() {
         </>
       )}
 
-      {/* MODAL PANEL ADMIN (5 clics en el logo MARVEL) */}
+      {/* MODAL MODO COLECCIÓN (5 clics en el logo MARVEL) */}
       {adminPanelOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
           <div className="bg-[#0e1017] border border-white/15 rounded-3xl max-w-sm w-full shadow-2xl relative p-6">
             <button
-              onClick={() => { setAdminPanelOpen(false); setAdminError(""); }}
+              onClick={() => setAdminPanelOpen(false)}
               className="absolute right-4 top-4 bg-white/5 hover:bg-white/10 p-1.5 rounded-full text-slate-400 transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
 
             <div className="flex items-center gap-2.5 mb-5">
-              <span className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-700 flex items-center justify-center">
-                <Lock className="w-5 h-5 text-white" />
+              <span className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
+                <Star className="w-5 h-5 text-white fill-white" />
               </span>
               <div>
-                <h3 className="font-black text-white">Acceso Administrador</h3>
-                <p className="text-[10px] text-slate-400">Ver y gestionar lo que hay en el servidor</p>
+                <h3 className="font-black text-white">Mi Colección Marvel</h3>
+                <p className="text-[10px] text-slate-400">Control de películas propias (físico / digital)</p>
               </div>
             </div>
 
-            {adminAuthed ? (
-              <div className="space-y-4">
-                <div className="bg-emerald-500/10 border border-emerald-500/30 p-3 rounded-xl text-xs text-emerald-300 font-semibold flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 shrink-0" />
-                  Sesión admin activa. Las estrellas amarillas y la lista del servidor son visibles.
-                </div>
-                <div className="bg-white/5 border border-white/10 p-3 rounded-xl text-xs text-slate-300">
-                  Para marcar/quitar un título del servidor: ábrelo (pincha en su tarjeta) y usa el botón <strong className="text-amber-400">En el servidor</strong>. Los visitantes sin esta sesión no verán ninguna estrella.
-                </div>
-                <button
-                  onClick={handleAdminLogout}
-                  className="w-full px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-red-600 hover:bg-red-700 transition-colors"
-                >
-                  Cerrar sesión admin
-                </button>
+            <div className="space-y-4">
+              <div className="bg-white/5 border border-white/10 p-3 rounded-xl text-xs text-slate-300">
+                Al activar el modo colección, podrás marcar con una estrella dorada las películas que tienes en tu estantería o servidor.
               </div>
-            ) : (
-              <form onSubmit={handleAdminLogin} className="space-y-3">
-                <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Usuario</label>
-                  <input
-                    type="text"
-                    value={adminUser}
-                    onChange={(e) => setAdminUser(e.target.value)}
-                    autoComplete="username"
-                    className="mt-1 w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white outline-none focus:border-indigo-500/60"
-                    placeholder="usuario"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Contraseña</label>
-                  <input
-                    type="password"
-                    value={adminPass}
-                    onChange={(e) => setAdminPass(e.target.value)}
-                    autoComplete="current-password"
-                    className="mt-1 w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white outline-none focus:border-indigo-500/60"
-                    placeholder="••••••••"
-                  />
-                </div>
-                {adminError && (
-                  <p className="text-xs font-semibold text-red-400 bg-red-500/10 border border-red-500/30 px-3 py-2 rounded-xl">
-                    {adminError}
-                  </p>
-                )}
-                <button
-                  type="submit"
-                  className="w-full px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-indigo-600 to-purple-700 hover:from-indigo-500 hover:to-purple-600 transition-all shadow-lg shadow-indigo-900/40"
-                >
-                  Entrar
-                </button>
-              </form>
-            )}
+              <button
+                onClick={toggleCollectionMode}
+                className={`w-full px-4 py-3 rounded-xl text-xs font-bold text-white transition-all shadow-lg ${adminAuthed ? "bg-amber-600 hover:bg-amber-500 shadow-amber-900/40" : "bg-indigo-600 hover:bg-indigo-500 shadow-indigo-900/40"}`}
+              >
+                {adminAuthed ? "⭐ Desactivar Modo Colección" : "✨ Activar Modo Colección"}
+              </button>
+            </div>
           </div>
         </div>
       )}
