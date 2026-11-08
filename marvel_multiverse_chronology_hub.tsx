@@ -1906,13 +1906,26 @@ const TENEMOS_IDS = [
   "incredible-hulk"
 ];
 
-// --- ACCESO ADMIN (oculto) ---
-const ADMIN_USER = "roca";
-const ADMIN_PASSWORD = "[REDACTED]";
+// --- ACCESO ADMIN (credenciales protegidas mediante hash SHA-256) ---
+const ADMIN_USER_HASH = "51997cc49513b006f1cab15c50ac9aa625781cb6fb6989dd867cc6cc12965d32";
+const ADMIN_PASS_HASH = "1e774cd6dff20948e66a1e9afad45e8a087074769ad07ca374a75a4dead9dc8a";
 const ADMIN_SESSION_KEY = "marvel_admin_session_v2";
 const OWNED_ADDED_KEY = "marvel_admin_owned_added_v2";
 const OWNED_REMOVED_KEY = "marvel_admin_owned_removed_v2";
 const OWNED_STARS_KEY = "marvel_show_owned_stars_v1";
+
+async function verifyAdminAuth(user: string, pass: string): Promise<boolean> {
+  try {
+    const encoder = new TextEncoder();
+    const userBuf = await crypto.subtle.digest("SHA-256", encoder.encode(user.trim().toLowerCase()));
+    const passBuf = await crypto.subtle.digest("SHA-256", encoder.encode(pass));
+    const userHex = Array.from(new Uint8Array(userBuf)).map(b => b.toString(16).padStart(2, "0")).join("");
+    const passHex = Array.from(new Uint8Array(passBuf)).map(b => b.toString(16).padStart(2, "0")).join("");
+    return userHex === ADMIN_USER_HASH && passHex === ADMIN_PASS_HASH;
+  } catch {
+    return false;
+  }
+}
 
 // --- RUTA MÍNIMA IMPRESCINDIBLE PARA AVENGERS: DOOMSDAY (orden de visión) ---
 const DOOMSDAY_RELEASE_DATE = new Date("2026-12-18T00:00:00");
@@ -3033,9 +3046,10 @@ export default function App() {
     }
   };
 
-  const handleAdminLogin = (e) => {
+  const handleAdminLogin = async (e) => {
     e.preventDefault();
-    if (adminUser.trim() === ADMIN_USER && adminPass === ADMIN_PASSWORD) {
+    const isValid = await verifyAdminAuth(adminUser, adminPass);
+    if (isValid) {
       setAdminAuthed(true);
       try { sessionStorage.setItem(ADMIN_SESSION_KEY, "1"); } catch (err) { console.error(err); }
       setAdminPanelOpen(false);

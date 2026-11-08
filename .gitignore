@@ -5,3 +5,8 @@ dist
 marvel_multiverse_chronology_hub (1).tsx
 pelis_*.txt
 tenemos.txt
+desktop.ini
+icon.ico
+.env*
+MEMORIA.md
+.agents/
